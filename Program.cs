@@ -10,6 +10,9 @@ namespace FileSystemProject
     {
         static void Main(string[] args)
         {
+            FileVisitor fileVisitor = new FileVisitor();
+            fileVisitor = new FileVisitor(true);
+            Console.ReadLine();
         }
     }
 }
