@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 namespace FileSystemProject
 {
-    public delegate void Notify();
     public class FileVisitor
     {
         public delegate string MyDel(string str);
