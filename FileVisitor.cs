@@ -7,49 +7,111 @@ using System.Threading.Tasks;
 
 namespace FileSystemProject
 {
+    public delegate void Mydel(bool f);
+
+    public delegate void Events(string msgs, bool f);
     public class FileVisitor
     {
-        public delegate string MyDel(string str);
-        public event MyDel MyEvent;
         private string rootPath = @"C:\Temp";
+        public event Events delEvent;
+
+        private Mydel mydel;
+
         public FileVisitor()
         {
-            
-            Notification("Start of Search");
+        }
+        public FileVisitor(Mydel f)
+        {
+            mydel = f;
+            mydel(true);
+        }
+
+        public void Files()
+        {
+
+            delEvent("Started Looking for files", true);
+
             foreach (string file in FindFiles())
             {
-                Console.WriteLine(file);
-            };
-            Notification("End of Search");
-        }
+                string FileName = Path.GetFileName(file);
+                delEvent(FileName, true);
+            }
+            delEvent("All files found Successfully", true);
 
-        public FileVisitor(bool flag)
+        }
+        public void CLLogger(string s, bool f)
         {
-            Notification("Deleting Files ...");
-            string[] files = Directory.GetFiles(rootPath, "*", SearchOption.AllDirectories);
-            Array.ForEach(files, file => File.Delete(file)) ;
-            Notification("Files Deleted Successfully");
+            if (f)
+            {
+                Console.WriteLine(s + "\n");
+            }
+            else
+            {
+                Console.WriteLine("Files Excluded......"+"\n");
+            }
         }
-      
 
+
+        public void deleteFiles(bool f)
+        {
+
+            var folders = Directory.GetDirectories(rootPath);
+            int fileCount = Directory.GetFiles(rootPath, "*.*", SearchOption.AllDirectories).Length;
+
+            delEvent("Deleting files started..", true);
+
+
+
+            if (fileCount == 0)
+            {
+                delEvent("No files found to delete", true);
+                return;
+            }
+
+
+
+            foreach (var folder in folders)
+            {
+                var fs = Directory.GetFiles(folder);
+
+
+
+                Console.WriteLine(folder + " ----------- files");
+                foreach (string file in fs)
+                {
+                    
+                    File.Delete(file);
+                    delEvent(file, true);
+                }
+                Console.WriteLine("\n");
+
+
+
+            }
+            delEvent("Deleted all files", true);
+
+
+
+        }
         public IEnumerable<string> FindFiles()
         {
             var files = Directory.GetFiles(rootPath, "*", SearchOption.AllDirectories);
-            foreach (string file in files)
+            var folders = Directory.GetDirectories(rootPath);
+            foreach (var folder in folders)
             {
-                yield return file;
+                var fs = Directory.GetFiles(folder);
+
+                Console.WriteLine(folder + " ----------- files");
+                foreach (string file in fs)
+                {
+                    yield return file;
+
+                }
+                Console.WriteLine("\n");
 
             }
+
         }
-        private void Notification(string Event)
-        {
-            MyEvent += new MyDel(Notify);
-            string result = MyEvent(Event);
-            Console.WriteLine(result);
-        }
-        private string Notify(string action)
-        {
-            return  action;
-        }
+        
     }
 }

@@ -11,7 +11,9 @@ namespace FileSystemProject
         static void Main(string[] args)
         {
             FileVisitor fileVisitor = new FileVisitor();
-            fileVisitor = new FileVisitor(true);
+            fileVisitor.delEvent += new Events(fileVisitor.CLLogger);
+            fileVisitor.Files();
+            new FileVisitor(fileVisitor.deleteFiles);
             Console.ReadLine();
         }
     }
