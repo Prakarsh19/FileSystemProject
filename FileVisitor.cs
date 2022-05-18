@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,111 +8,100 @@ using System.Threading.Tasks;
 
 namespace FileSystemProject
 {
-    public delegate void Mydel(bool f);
-
-    public delegate void Events(string msgs, bool f);
+    
+    public delegate void Mydel(FileSystemRoot fileSystemRoot);
     public class FileVisitor
     {
-        private string rootPath = @"C:\Temp";
-        public event Events delEvent;
-
-        private Mydel mydel;
-
+        public event EventHandler<FileSystemRoot> FileSearchStart;
+        public event EventHandler<FileSystemRoot> FileSearchEnd;
+        public event EventHandler<FileSystemRoot> FileAbort;
+        public event EventHandler<FileSystemRoot> FileFound;
+        public event EventHandler<FileSystemRoot> FileDeleteStart;
+        public event EventHandler<FileSystemRoot> FileDeleteEnd;
+        public event EventHandler<FileSystemRoot> FileDeleted;
         public FileVisitor()
         {
         }
-        public FileVisitor(Mydel f)
+        
+        public void FileSearch(FileSystemRoot fileSystemRoot)
+        {
+            
+            try
+            {
+                string path,fileNameExtension;
+                path = fileSystemRoot.Path;
+                FileSearchStart?.Invoke(this, fileSystemRoot);
+                foreach (string file in FindFiles(fileSystemRoot))
+                {
+                    fileNameExtension = Path.GetExtension(file);
+                    if(fileSystemRoot.AbortFile && string.IsNullOrWhiteSpace(fileNameExtension))
+                    {
+                        FileAbort?.Invoke(this, fileSystemRoot);
+                        return;
+                    }
+                    string FileName = Path.GetFileName(file);
+                    if (file.Contains(fileSystemRoot.SearchFileName))
+                    {
+                        FileFound?.Invoke(this, fileSystemRoot);
+                    }
+                    Console.WriteLine(file);
+                }
+                FileSearchEnd?.Invoke(this, fileSystemRoot);
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine(ex.ToString());   
+            }
+        }
+        private Mydel mydel;
+        public FileVisitor(Mydel f, FileSystemRoot fileSystemRoot)
         {
             mydel = f;
-            mydel(true);
+            mydel(fileSystemRoot);
         }
 
-        public void Files()
+        public void deleteFiles(FileSystemRoot fileSystemRoot)
         {
 
-            delEvent("Started Looking for files", true);
-
-            foreach (string file in FindFiles())
-            {
-                string FileName = Path.GetFileName(file);
-                delEvent(FileName, true);
-            }
-            delEvent("All files found Successfully", true);
-
-        }
-        public void CLLogger(string s, bool f)
-        {
-            if (f)
-            {
-                Console.WriteLine(s + "\n");
-            }
-            else
-            {
-                Console.WriteLine("Files Excluded......"+"\n");
-            }
-        }
-
-
-        public void deleteFiles(bool f)
-        {
-
-            var folders = Directory.GetDirectories(rootPath);
-            int fileCount = Directory.GetFiles(rootPath, "*.*", SearchOption.AllDirectories).Length;
-
-            delEvent("Deleting files started..", true);
-
-
-
+            var folders = Directory.GetDirectories(fileSystemRoot.Path);
+            int fileCount = Directory.GetFiles(fileSystemRoot.Path, "*.*", SearchOption.AllDirectories).Length;
             if (fileCount == 0)
             {
-                delEvent("No files found to delete", true);
+                FileAbort?.Invoke(this, fileSystemRoot);
                 return;
             }
-
-
-
+            FileDeleteStart?.Invoke(this, fileSystemRoot);
             foreach (var folder in folders)
             {
                 var fs = Directory.GetFiles(folder);
-
-
-
-                Console.WriteLine(folder + " ----------- files");
+                
                 foreach (string file in fs)
                 {
-                    
-                    File.Delete(file);
-                    delEvent(file, true);
+                    var fileNameExtension = Path.GetExtension(file);
+                    if (file.Contains(fileSystemRoot.DeleteFileName))
+                    {
+                        File.Delete(file);
+                        FileDeleted?.Invoke(this, fileSystemRoot);
+                    }
                 }
-                Console.WriteLine("\n");
-
-
-
             }
-            delEvent("Deleted all files", true);
-
-
-
+            FileDeleteEnd?.Invoke(this, fileSystemRoot);
         }
-        public IEnumerable<string> FindFiles()
-        {
-            var files = Directory.GetFiles(rootPath, "*", SearchOption.AllDirectories);
-            var folders = Directory.GetDirectories(rootPath);
-            foreach (var folder in folders)
-            {
-                var fs = Directory.GetFiles(folder);
-
-                Console.WriteLine(folder + " ----------- files");
-                foreach (string file in fs)
+        public IEnumerable<string> FindFiles(FileSystemRoot fileSystemRoot)
                 {
-                    yield return file;
-
+                    var files = Directory.GetFiles(fileSystemRoot.Path, "*", SearchOption.AllDirectories);
+                    var folders = Directory.GetDirectories(fileSystemRoot.Path);
+                    foreach (var folder in folders)
+                    {
+                        var fs = Directory.GetFiles(folder).Where(excludeFiles=>!excludeFiles.EndsWith(fileSystemRoot.FilesToExclude));
+                        Console.WriteLine(folder + " ----------- files");
+                        foreach (string file in fs)
+                        {
+                            yield return file;
+                        }
+                        Console.WriteLine("\n");
+                    }
                 }
-                Console.WriteLine("\n");
 
-            }
-
-        }
-        
     }
 }
